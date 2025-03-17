@@ -7,6 +7,8 @@ import pickle
 from PIL import Image
 from torchvision import transforms
 from pathlib import Path
+from torch.utils.data import random_split
+
 
 
 class SimpsonDataset(Dataset):
@@ -45,7 +47,7 @@ class SimpsonDataset(Dataset):
 
         x = transforms_img(x)
 
-        if self.mode == 'train':
+        if self.mode == 'train' or self.mode == 'val':
             label_id = self.label_encoder.transform([self.labels[index]])
             y = label_id.item()
             return x, y
@@ -57,9 +59,15 @@ class SimpsonDataset(Dataset):
         return self._len
     
 
-# path = "/home/ilya/.cache/kagglehub/datasets/alexattia/the-simpsons-characters-dataset/versions/4/simpsons_dataset/simpsons_dataset"
-# dataset = SimpsonDataset(path)
+path = "/home/ilya/.cache/kagglehub/datasets/alexattia/the-simpsons-characters-dataset/versions/4/simpsons_dataset/simpsons_dataset"
+dataset = SimpsonDataset(path)
 
 # tmp, y = dataset.__getitem__(10)
 # print(tmp.shape)
 # print(tmp)
+
+
+train_size = int(0.8 * len(dataset))  # 80% данных для обучения
+val_size = len(dataset) - train_size  # 20% данных для валидации
+
+train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
