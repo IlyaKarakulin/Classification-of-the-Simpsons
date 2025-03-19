@@ -19,14 +19,22 @@ class SimpsonDataset(Dataset):
         self.files = list(self.path_to_files.rglob('*.jpg'))
         self._len = len(self.files)
 
-        self.label_encoder = LabelEncoder()
 
-        self.labels = [path.parent.name for path in self.files]
-        self.label_encoder.fit(self.labels)
+        if mode == 'train' or mode == 'val':
+            self.label_encoder = LabelEncoder()
 
-        os.makedirs('./meta_data', exist_ok=True)
-        with open('./meta_data/label_encoder_conf.pkl', 'wb') as le_conf:
-            pickle.dump(self.label_encoder, le_conf)
+            self.labels = [path.parent.name for path in self.files]
+            self.label_encoder.fit(self.labels)
+            os.makedirs('./meta_data', exist_ok=True)
+
+            with open('./meta_data/label_encoder.pkl', 'wb') as le_conf:
+                pickle.dump(self.label_encoder, le_conf)
+
+        elif mode == 'test':
+            self.label_encoder = pickle.load(open("./meta_data/label_encoder.pkl", 'rb'))
+            
+        else:
+            pass
 
     def load_sample(self, file):
         image = Image.open(file)
@@ -39,21 +47,17 @@ class SimpsonDataset(Dataset):
         x, _ = self.load_sample(self.files[index])
 
         transforms_img = transforms.Compose([
-            transforms.Resize(256, 256),
+            transforms.Resize((256, 256)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
 
         x = transforms_img(x)
 
-        if self.mode == 'train' or self.mode == 'val':
-            label_id = self.label_encoder.transform([self.labels[index]])
-            y = label_id.item()
-            return x, y
+        label_id = self.label_encoder.transform([self.labels[index]])
+        y = label_id.item()
+        return x, y
         
-        elif self.mode == 'test':
-            return  x
-
     def __len__(self):
         return self._len
     
