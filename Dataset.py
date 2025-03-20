@@ -9,7 +9,6 @@ from torchvision import transforms
 from pathlib import Path
 
 
-
 class SimpsonDataset(Dataset):
     def __init__(self, path_to_files, mode='train'):
         super().__init__()
@@ -25,8 +24,8 @@ class SimpsonDataset(Dataset):
 
             self.labels = [path.parent.name for path in self.files]
             self.label_encoder.fit(self.labels)
-            os.makedirs('./meta_data', exist_ok=True)
 
+            os.makedirs('./meta_data', exist_ok=True)
             with open('./meta_data/label_encoder.pkl', 'wb') as le_conf:
                 pickle.dump(self.label_encoder, le_conf)
 

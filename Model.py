@@ -1,3 +1,5 @@
+import os
+
 import torch.nn as nn
 import torch
 from tqdm import tqdm
@@ -5,6 +7,7 @@ from Dataset import SimpsonDataset
 from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import torch.optim as optim
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
 class Model(nn.Module):
@@ -21,27 +24,11 @@ class Model(nn.Module):
         return x
 
 
-
-# path_to_test = '/home/ilya/.cache/kagglehub/datasets/alexattia/the-simpsons-characters-dataset/versions/4/kaggle_simpson_testset/kaggle_simpson_testset'
-# test_loader = DataLoader(path_to_test)
-
-# with torch.no_grad():
-#     logits = []
-
-#     for inputs in test_loader:
-#         inputs = inputs.to(self.device)
-#         self.model.eval()
-#         outputs = self.model(inputs).cpu()
-#         logits.append(outputs)
-
-# probabilities = nn.functional.softmax(torch.cat(logits), dim=-1).numpy()
-
-
 class Classifier():
     def __init__(self):
         self.model = Model()
 
-    def train(self, path_to_train_and_val, num_epoch=1, batch_size=32, lr=0.001):
+    def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
 
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
 
@@ -68,35 +55,48 @@ class Classifier():
                 loss.backward()
                 optimizer.step()
 
-        state = self.model.state_dict()
-        torch.save(state, "state.tar")
 
+    def save_model(self):
+        state = self.model.state_dict()
+        os.makedirs('./meta_data', exist_ok=True)
+        torch.save(state, "./meta_data/state.tar")
+
+
+    def load_model(self, path="./meta_data/state.tar"):
+        self.model = Model()
+        
+        state_dict = torch.load(path)
+        self.model.load_state_dict(state_dict)
+        
         self.model.eval()
 
-    def test(path_to_test_data):
+
+    def test(self, path_to_test_data: str, batch_size=32):
+        self.model.eval()
         
         testset = SimpsonDataset(path_to_test_data, mode='test')
-        Simpson_dataloader_train = DataLoader(testset, batch_size=batch_size, shuffle=True)
+        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
+        
+        all_preds = []
+        all_labels = []
 
-        loss_func = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(self.model.parameters(), lr=lr)
+        with torch.no_grad():
+            for x_test, y_test in tqdm(test_loader, position=0, leave=True):
+                outputs = self.model(x_test)
+                
+                _, preds = torch.max(outputs, 1)
+                
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(y_test.cpu().numpy())
 
-        self.model.train()
+        accuracy = accuracy_score(all_labels, all_preds)
+        precision = precision_score(all_labels, all_preds, average='macro')
+        recall = recall_score(all_labels, all_preds, average='macro')
+        f1 = f1_score(all_labels, all_preds, average='macro')
 
-        for _ in range(num_epoch):
+        print(f"Accuracy: {accuracy:.4f}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
+        print(f"F1 Score: {f1:.4f}")
 
-            for x_train, y_train in tqdm(Simpson_dataloader_train, position=0, leave=True):
-
-                optimizer.zero_grad()
-
-                predict = self.model(x_train)
-                loss = loss_func(predict, y_train)
-
-                loss.backward()
-                optimizer.step()
-
-        state = self.model.state_dict()
-        torch.save(state, "state.tar")
-
-        self.model.eval()
 
