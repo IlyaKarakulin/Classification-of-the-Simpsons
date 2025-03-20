@@ -25,14 +25,14 @@ class SimpsonDataset(Dataset):
             self.labels = [path.parent.name for path in self.files]
             self.label_encoder.fit(self.labels)
 
-            os.makedirs('./Classification-of-the-Simpsons/meta_data', exist_ok=True)
-            with open('./Classification-of-the-Simpsons/meta_data/label_encoder.pkl', 'wb') as le_conf:
+            os.makedirs('./meta_data', exist_ok=True)
+            with open('./meta_data/label_encoder.pkl', 'wb') as le_conf:
                 pickle.dump(self.label_encoder, le_conf)
 
         elif mode == 'test':
-            self.label_encoder = pickle.load(open("./Classification-of-the-Simpsons/meta_data/label_encoder.pkl", 'rb'))
+            self.label_encoder = pickle.load(open("./meta_data/label_encoder.pkl", 'rb'))
             self.labels = [path.parent.name for path in self.files]
-            
+
         else:
             pass
 
