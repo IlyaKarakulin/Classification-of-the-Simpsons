@@ -58,11 +58,11 @@ class Classifier():
 
     def save_model(self):
         state = self.model.state_dict()
-        os.makedirs('./meta_data', exist_ok=True)
-        torch.save(state, "./meta_data/state.tar")
+        os.makedirs('./Classification-of-the-Simpsons/meta_data', exist_ok=True)
+        torch.save(state, "./Classification-of-the-Simpsons/meta_data/state.tar")
 
 
-    def load_model(self, path="./meta_data/state.tar"):
+    def load_model(self, path="./Classification-of-the-Simpsons/meta_data/state.tar"):
         self.model = Model()
         
         state_dict = torch.load(path)
