@@ -62,8 +62,9 @@ class Model(nn.Module):
 
 
 class Classifier():
-    def __init__(self):
-        self.model = Model()
+    def __init__(self, device='cpu'):
+        self.device = device
+        self.model = Model().to(self.device)
 
 
     def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001, save_each_epoch=True):
@@ -74,8 +75,8 @@ class Classifier():
         val_size = len(test_val_dataset) - train_size
 
         train_dataset, val_dataset = random_split(test_val_dataset, [train_size, val_size])
-        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True)
 
         loss_func = nn.CrossEntropyLoss()
         optimizer = optim.SGD(self.model.parameters(), lr=lr)
@@ -88,6 +89,8 @@ class Classifier():
             print("Epoch:", epoch)
 
             for x_train, y_train in tqdm(Simpson_dataloader_train, position=0, leave=True):
+                x_train = x_train.to(self.device)
+                y_train = y_train.to(self.device)
 
                 optimizer.zero_grad()
 
@@ -115,6 +118,9 @@ class Classifier():
 
         with torch.no_grad():
             for x_test, y_test in tqdm(dataloader, position=0, leave=True):
+                x_test = x_test.to(self.device)
+                y_test = y_test.to(self.device)
+
                 outputs = self.model(x_test)
                 
                 _, preds = torch.max(outputs, 1)
@@ -141,7 +147,7 @@ class Classifier():
 
 
     def load_model(self, path="./meta_data/state.tar"):
-        self.model = Model()
+        self.model = Model().to(self.device)
         
         state_dict = torch.load(path)
         self.model.load_state_dict(state_dict)
@@ -153,13 +159,16 @@ class Classifier():
         self.model.eval()
         
         testset = SimpsonDataset(path_to_test_data, mode='test')
-        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
+        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False, pin_memory=True)
         
         all_preds = []
         all_labels = []
 
         with torch.no_grad():
             for x_test, y_test in tqdm(test_loader, position=0, leave=True):
+                x_test = x_test.to(self.device)
+                y_test = y_test.to(self.device)
+
                 outputs = self.model(x_test)
                 
                 _, preds = torch.max(outputs, 1)
