@@ -18,13 +18,46 @@ class Model(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=42, kernel_size=256, stride=1),
+            nn.Conv2d(in_channels=3, out_channels=8, kernel_size=11, stride=4),
+            nn.ReLU(),
+        )
+
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(in_channels=8, out_channels=16, kernel_size=5, stride=2),
+            nn.ReLU(),
+        )
+
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1),
+            nn.ReLU(),
+        )
+
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1, 1))
+        )
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(64, n_classes),
+        )
+
+        self.SoftMax = nn.Sequential(
+            nn.Softmax(dim=1)
         )
 
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+
         x = x.view(x.size(0), -1)
+
+        x = self.fc1(x)
+        x = self.SoftMax(x)
+
         return x
 
 
@@ -33,7 +66,7 @@ class Classifier():
         self.model = Model()
 
 
-    def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
+    def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001, save_each_epoch=True):
 
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
 
@@ -52,6 +85,7 @@ class Classifier():
         metrics = []
 
         for epoch in range(num_epoch):
+            print("Epoch:", epoch)
 
             for x_train, y_train in tqdm(Simpson_dataloader_train, position=0, leave=True):
 
@@ -63,13 +97,17 @@ class Classifier():
                 loss.backward()
                 optimizer.step()
 
-            metrics.append(self.count_metrics(epoch, Simpson_dataloader_val))
+            metrics.append(self.count_metrics(Simpson_dataloader_val))
+
+            if(save_each_epoch):
+                name = f"epoch{epoch}"
+                self.__save_model__(name)
 
         data_metrics = pd.DataFrame(metrics, columns=['Accuracy', 'Precision', 'Recall', 'F1'])
         data_metrics.to_csv('./meta_data/metrics.csv')
 
 
-    def count_metrics(self, epoch, dataloader):
+    def count_metrics(self, dataloader):
         self.model.eval()
 
         all_labels = []
@@ -89,17 +127,17 @@ class Classifier():
         avg_recall = recall_score(all_labels, all_preds, zero_division=True, average='macro')
         avg_f1 = f1_score(all_labels, all_preds, zero_division=True, average='macro')
 
-        print(f"{epoch:3}) Avg metrics | Acc: {avg_accuracy:.3f} | P: {avg_precision:.3f} | R: {avg_recall:.3f} | F1: {avg_f1:.3f}")
+        print(f"Avg metrics | Acc: {avg_accuracy:.3f} | P: {avg_precision:.3f} | R: {avg_recall:.3f} | F1: {avg_f1:.3f}")
 
         self.model.train()
+        metric = [avg_accuracy, avg_precision, avg_recall, avg_f1]
+        return metric
 
-        return list(avg_accuracy, avg_precision, avg_recall, avg_f1)
 
-
-    def save_model(self):
+    def __save_model__(self, name):
         state = self.model.state_dict()
         os.makedirs('./meta_data', exist_ok=True)
-        torch.save(state, "./meta_data/state.tar")
+        torch.save(state, f"./meta_data/{name}.tar")
 
 
     def load_model(self, path="./meta_data/state.tar"):

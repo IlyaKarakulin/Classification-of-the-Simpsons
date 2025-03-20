@@ -5,12 +5,14 @@ path_to_testset = '/home/ilya/.cache/kagglehub/datasets/alexattia/the-simpsons-c
 
 model = Classifier()
 
-# SimpsonDataset(path_to_train_and_val)
+model.train(
+    path_to_train_and_val=path_to_train_and_val,
+    num_epoch=3,
+    batch_size=64,
+    lr=0.001,
+    save_each_epoch=True
+)
 
-# model.train(path_to_train_and_val)
+# model.load_model()
 
-# model.save_model()
-
-model.load_model()
-
-model.test(path_to_testset)
+# model.test(path_to_testset)
