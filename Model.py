@@ -98,6 +98,13 @@ class Classifier():
         self.device = device
         self.model = Model().to(self.device)
 
+        if self.device == 'cpu':
+            self.num_workers = 0
+            self.pin_memory = False
+        else:
+            self.num_workers = 16
+            self.pin_memory = True
+
 
     def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001, save_each_epoch=True):
 
@@ -109,8 +116,9 @@ class Classifier():
         val_size = len(test_val_dataset) - train_size
 
         train_dataset, val_dataset = random_split(test_val_dataset, [train_size, val_size])
-        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
-        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
+
+        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=self.num_workers, shuffle=True, pin_memory=self.pin_memory)
+        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=self.num_workers, shuffle=False, pin_memory=self.pin_memory)
 
         loss_func = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
@@ -229,7 +237,7 @@ class Classifier():
         self.model.eval()
         
         testset = SimpsonDataset(path_to_test_data, mode='test')
-        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
+        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=self.num_workers, shuffle=False, pin_memory=self.pin_memory)
         
         all_preds = []
         all_labels = []
