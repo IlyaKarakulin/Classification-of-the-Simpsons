@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as f
 import torch.optim as optim
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.metrics import classification_report
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
@@ -16,7 +15,7 @@ from Dataset import SimpsonDataset
 
 def get_device():
     if torch.cuda.is_available():
-        device = torch.device("cuda:2")
+        device = torch.device("cuda:1")
         print(f"Using GPU: {torch.cuda.get_device_name(0)}")
     else:
         device = torch.device("cpu")
@@ -106,13 +105,13 @@ class Classifier():
             self.pin_memory = True
 
 
-    def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001, save_each_epoch=True):
+    def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
 
-        print(f"Num epoch: {num_epoch} | Batch size: {batch_size} | Learning rate: {lr}")
+        print(f"Num epoch: {num_epoch} | Batch size: {batch_size} | Initial learning rate: {lr}")
 
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
 
-        train_size = int(0.8 * len(test_val_dataset))
+        train_size = int(0.8 * len(test_val_dataset)) 
         val_size = len(test_val_dataset) - train_size
 
         train_dataset, val_dataset = random_split(test_val_dataset, [train_size, val_size])
@@ -130,26 +129,35 @@ class Classifier():
             factor=0.1,
             patience=2,
         )
-        # self.scheduler.get_last_lr()
-
+        metrics_data = []
         self.model.train()
 
-        metrics = []
+        best_val_acc = 0.0
 
         for count_epoch in range(num_epoch):
             print("Epoch:", count_epoch)
 
             train_metrics = self.epoch(Simpson_dataloader_train, optimizer, loss_func)
             val_metrics = self.validation(Simpson_dataloader_val, loss_func)
-            self.scheduler.step(val_metrics[0])
+            self.scheduler.step(val_metrics['Val_Loss'])
 
-            metrics.append(train_metrics + val_metrics)
+            new_lr = self.optimizer.param_groups[0]['lr']
+            
+            all_metrics = train_metrics | val_metrics
+            metrics_data.append(all_metrics.values())
+            
+            if(val_metrics["Val_Acc"] > best_val_acc):
+                self.__save_model__("best")
+                best_val_acc = val_metrics["Val_Acc"]
 
-            if(save_each_epoch):
-                name = f"epoch{count_epoch}"
-                self.__save_model__(name)
+            print(
+                f"Lr: {new_lr} | Loss: {val_metrics['Val_Loss']:.3f} | "
+                f"Acc: {val_metrics['Val_Acc']:.3f} | P: {val_metrics['Val_P']:.3f} | "
+                f"R: {val_metrics['Val_R']:.3f} | F1: {val_metrics['Val_F1']:.3f}"
+            )
 
-        data_metrics = pd.DataFrame(metrics, columns=['Train loss', 'Train acc', 'Val loss', 'Val acc', ' Val precision', 'Val recall', 'Val F1'])
+        self.__save_model__("lost")
+        data_metrics = pd.DataFrame(metrics_data, columns=['Train_Loss', 'Train_Acc', 'Val_Loss', 'Val_Acc', 'Val_P', 'Val_R', 'Val_F1'])
         data_metrics.to_csv('./meta_data/metrics.csv')
 
 
@@ -178,7 +186,14 @@ class Classifier():
         train_loss = summ_loss / processed_data
         train_acc = running_corrects.cpu().numpy() / processed_data
 
-        return list([train_loss, train_acc])
+        metrics = dict(
+            {
+                "Train_Loss":  train_loss,
+                "Train_Acc": train_acc
+            }
+        )
+
+        return metrics
 
 
     def validation(self, val_dataloader, loss_func):
@@ -207,15 +222,22 @@ class Classifier():
 
         
         val_loss = running_loss / count_data
-        avg_accuracy = accuracy_score(all_labels, all_preds)
-        avg_precision = precision_score(all_labels, all_preds, zero_division=True, average='macro')
-        avg_recall = recall_score(all_labels, all_preds, zero_division=True, average='macro')
-        avg_f1 = f1_score(all_labels, all_preds, zero_division=True, average='macro')
-
-        print(f"Avg metrics on val | Loss: {val_loss:.3f} | Acc: {avg_accuracy:.3f} | P: {avg_precision:.3f} | R: {avg_recall:.3f} | F1: {avg_f1:.3f}")
+        accuracy = accuracy_score(all_labels, all_preds)
+        precision = precision_score(all_labels, all_preds, zero_division=True, average='macro')
+        recall = recall_score(all_labels, all_preds, zero_division=True, average='macro')
+        f1 = f1_score(all_labels, all_preds, zero_division=True, average='macro')
 
         self.model.train()
-        return list([val_loss, avg_accuracy, avg_precision, avg_recall, avg_f1])
+        metrics = dict(
+            {
+                "Val_Loss": val_loss,
+                "Val_Acc": accuracy,
+                "Val_P": precision,
+                "Val_R": recall,
+                "Val_F1": f1
+            }
+        )
+        return metrics
 
 
     def __save_model__(self, name):
