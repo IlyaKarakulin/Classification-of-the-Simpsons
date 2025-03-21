@@ -109,8 +109,8 @@ class Classifier():
         val_size = len(test_val_dataset) - train_size
 
         train_dataset, val_dataset = random_split(test_val_dataset, [train_size, val_size])
-        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, shuffle=True, pin_memory=True)
-        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=8, shuffle=False, pin_memory=True)
+        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
+        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
 
         loss_func = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
@@ -121,8 +121,8 @@ class Classifier():
             mode='min',
             factor=0.1,
             patience=2,
-            verbose=True
         )
+        # self.scheduler.get_last_lr()
 
         self.model.train()
 
@@ -229,7 +229,7 @@ class Classifier():
         self.model.eval()
         
         testset = SimpsonDataset(path_to_test_data, mode='test')
-        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=8, shuffle=False, pin_memory=True)
+        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
         
         all_preds = []
         all_labels = []
