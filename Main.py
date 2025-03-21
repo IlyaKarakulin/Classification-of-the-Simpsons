@@ -10,13 +10,14 @@ path_to_testset = "/home/i.karakulin/.cache/kagglehub/datasets/alexattia/the-sim
 device = get_device()
 model = Classifier(device)
 
-model.train(
-    path_to_train_and_val=path_to_train_and_val,
-    num_epoch=20,
-    batch_size=256,
-    lr=0.0007,
-)
+# model.train(
+#     path_to_train_and_val=path_to_train_and_val,
+#     num_epoch=20,
+#     batch_size=256,
+#     lr=0.0007,
+# )
 
-# model.load_model('/home/i.karakulin/Classification-of-the-Simpsons/meta_data/epoch19.tar')
+# path_to_model = '/home/i.karakulin/Classification-of-the-Simpsons/meta_data/lost.tar'
+# model.load_model(path_to_model)
 
 # model.test(path_to_testset)
