@@ -6,6 +6,7 @@ from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 import torch.nn.functional as f
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from tqdm import tqdm
 import numpy as np
@@ -96,6 +97,7 @@ class Classifier():
     def __init__(self, device='cpu'):
         self.device = device
         self.model = Model().to(self.device)
+        self.writer = None 
 
         if self.device == 'cpu':
             self.num_workers = 0
@@ -108,6 +110,7 @@ class Classifier():
     def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
 
         print(f"Num epoch: {num_epoch} | Batch size: {batch_size} | Initial learning rate: {lr}")
+        self.writer = SummaryWriter(f'meta_data/{num_epoch}epochs_{lr}lr')
 
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
 
@@ -132,6 +135,9 @@ class Classifier():
         metrics_data = []
         self.model.train()
 
+        sample_input = next(iter(Simpson_dataloader_train))[0].to(self.device)
+        self.writer.add_graph(self.model, sample_input)
+
         best_val_acc = 0.0
 
         for count_epoch in range(num_epoch):
@@ -140,6 +146,9 @@ class Classifier():
             train_metrics = self.epoch(Simpson_dataloader_train, optimizer, loss_func)
             val_metrics = self.validation(Simpson_dataloader_val, loss_func)
             self.scheduler.step(val_metrics['Val_Loss'])
+
+            self.__log_metrics(train_metrics, val_metrics, count_epoch)
+            self.__log_weights(count_epoch)
 
             new_lr = self.optimizer.param_groups[0]['lr']
             
@@ -156,6 +165,7 @@ class Classifier():
                 f"R: {val_metrics['Val_R']:.3f} | F1: {val_metrics['Val_F1']:.3f}"
             )
 
+        self.writer.close()
         self.__save_model__("lost")
         data_metrics = pd.DataFrame(metrics_data, columns=['Train_Loss', 'Train_Acc', 'Val_Loss', 'Val_Acc', 'Val_P', 'Val_R', 'Val_F1'])
         data_metrics.to_csv('./meta_data/metrics.csv')
@@ -194,6 +204,17 @@ class Classifier():
         )
 
         return metrics
+    
+    def __log_metrics(self, train_metrics, val_metrics, epoch):
+        for metric, value in train_metrics.items():
+            self.writer.add_scalar(f'Train/{metric}', value, epoch)
+        
+        for metric, value in val_metrics.items():
+            self.writer.add_scalar(f'Validation/{metric}', value, epoch)
+
+    def __log_weights(self, epoch):
+        for name, param in self.model.named_parameters():
+            self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch)
 
 
     def validation(self, val_dataloader, loss_func):
@@ -289,5 +310,13 @@ class Classifier():
         })
         
         class_metrics.to_csv('./meta_data/test_metric.csv', index=False)
+
+        self.writer.add_text('Test Metrics', f'''
+            Precision: {np.mean(precision_per_class):.3f}
+            Recall: {np.mean(recall_per_class):.3f}
+            F1: {np.mean(f1_per_class):.3f}
+        ''')
+        
+        self.writer.close()
 
 
