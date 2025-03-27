@@ -68,15 +68,14 @@ class Model(nn.Module):
         )
 
         self.fc1 = nn.Sequential(
-            # nn.Linear(4 * 4 * 256, 2048),
-            # nn.BatchNorm1d(2048),
-            nn.Linear(256, 1024),
-            nn.BatchNorm1d(1024),
+            nn.Linear(4 * 4 * 256, 2048),
+            # nn.Linear(256, 2048),
+            nn.BatchNorm1d(2048),
             nn.ReLU(),
         )
 
         self.fc2 = nn.Sequential(
-            nn.Linear(1024, n_classes),
+            nn.Linear(2048, n_classes),
         )
 
     def forward(self, x):
@@ -87,8 +86,8 @@ class Model(nn.Module):
         # x = self.conv5(x)
         x = self.conv6(x)
 
-        # x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
-        x = x.view(x.size(0), 256)
+        x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
+        x = x.view(x.size(0), 256 * 4 * 4)
 
         x = self.fc1(x)
         x = self.fc2(x)
@@ -112,7 +111,7 @@ class Classifier():
 
     def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
-        self.writer = SummaryWriter(f'meta_data/{num_epoch}epochs_{lr}lr')
+        self.writer = SummaryWriter(f'meta_data/5conv-fc4*4*256->2048->42')
 
         train_size = int(0.8 * len(test_val_dataset)) 
         val_size = len(test_val_dataset) - train_size
@@ -135,9 +134,6 @@ class Classifier():
         metrics_data = []
         self.model.train()
 
-        sample_input = next(iter(Simpson_dataloader_train))[0].to(self.device)
-        self.writer.add_graph(self.model, sample_input)
-
         best_val_acc = 0.0
 
         print(f"Num epoch: {num_epoch} | Batch size: {batch_size} | Initial learning rate: {lr}")
@@ -145,14 +141,14 @@ class Classifier():
         for count_epoch in range(num_epoch):
             print("Epoch:", count_epoch)
 
-            train_metrics = self.epoch(Simpson_dataloader_train, optimizer, loss_func)
+            train_metrics = self.epoch(count_epoch, Simpson_dataloader_train, optimizer, loss_func)
             val_metrics = self.validation(Simpson_dataloader_val, loss_func)
+
             self.scheduler.step(val_metrics['Val_Loss'])
+            new_lr = self.optimizer.param_groups[0]['lr']
 
             self.__log_metrics(train_metrics, val_metrics, count_epoch)
             self.__log_weights(count_epoch)
-
-            new_lr = self.optimizer.param_groups[0]['lr']
             
             all_metrics = train_metrics | val_metrics
             metrics_data.append(all_metrics.values())
@@ -173,12 +169,12 @@ class Classifier():
         data_metrics.to_csv('./meta_data/metrics.csv')
 
 
-    def epoch(self, train_dataloader, optimizer, loss_func):
+    def epoch(self, count_epoch, train_dataloader, optimizer, loss_func):
         summ_loss = 0.0
         running_corrects = 0.0
         processed_data = 0.0
 
-        for x_train, y_train in tqdm(train_dataloader, position=0, ncols=75, leave=True):
+        for batch_idx, (x_train, y_train) in enumerate(tqdm(train_dataloader, position=0, ncols=75, leave=True)):
             x_train = x_train.to(self.device)
             y_train = y_train.to(self.device)
 
@@ -188,6 +184,10 @@ class Classifier():
             loss = loss_func(predict, y_train)
 
             loss.backward()
+
+            if batch_idx == len(train_dataloader) - 1:
+                self.__log_gradients(count_epoch)
+
             optimizer.step()
 
             res_pred = torch.argmax(predict, 1)
@@ -217,6 +217,15 @@ class Classifier():
     def __log_weights(self, epoch):
         for name, param in self.model.named_parameters():
             self.writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch)
+
+    def __log_gradients(self, epoch):
+        for name, param in self.model.named_parameters():
+            if param.grad is not None:
+                self.writer.add_histogram(
+                    f"Gradients/{name}", 
+                    param.grad.clone().cpu().data.numpy(), 
+                    epoch
+                )
 
 
     def validation(self, val_dataloader, loss_func):
