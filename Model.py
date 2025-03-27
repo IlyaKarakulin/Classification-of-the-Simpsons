@@ -16,7 +16,7 @@ from Dataset import SimpsonDataset
 
 def get_device():
     if torch.cuda.is_available():
-        device = torch.device("cuda:1")
+        device = torch.device("cuda:2")
         print(f"Using GPU: {torch.cuda.get_device_name(0)}")
     else:
         device = torch.device("cpu")
@@ -53,27 +53,30 @@ class Model(nn.Module):
             nn.ReLU(),
         )
 
-        self.conv5 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU()
-        )
+        # self.conv5 = nn.Sequential(
+        #     nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1),
+        #     nn.BatchNorm2d(256),
+        #     nn.ReLU()
+        # )
 
         self.conv6 = nn.Sequential(
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=2),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2)
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.AdaptiveAvgPool2d((1,1))
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(4 * 4 * 256, 2048),
-            nn.BatchNorm1d(2048),
+            # nn.Linear(4 * 4 * 256, 2048),
+            # nn.BatchNorm1d(2048),
+            nn.Linear(256, 1024),
+            nn.BatchNorm1d(1024),
             nn.ReLU(),
         )
 
         self.fc2 = nn.Sequential(
-            nn.Linear(2048, n_classes),
+            nn.Linear(1024, n_classes),
         )
 
     def forward(self, x):
@@ -81,11 +84,11 @@ class Model(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
-        x = self.conv5(x)
+        # x = self.conv5(x)
         x = self.conv6(x)
 
-        x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
-        x = x.view(x.size(0), 4 * 4 * 256)
+        # x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
+        x = x.view(x.size(0), 256)
 
         x = self.fc1(x)
         x = self.fc2(x)
@@ -108,19 +111,16 @@ class Classifier():
 
 
     def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
-
-        print(f"Num epoch: {num_epoch} | Batch size: {batch_size} | Initial learning rate: {lr}")
-        self.writer = SummaryWriter(f'meta_data/{num_epoch}epochs_{lr}lr')
-
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
+        self.writer = SummaryWriter(f'meta_data/{num_epoch}epochs_{lr}lr')
 
         train_size = int(0.8 * len(test_val_dataset)) 
         val_size = len(test_val_dataset) - train_size
 
         train_dataset, val_dataset = random_split(test_val_dataset, [train_size, val_size])
 
-        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=self.num_workers, shuffle=True, pin_memory=self.pin_memory)
-        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=self.num_workers, shuffle=False, pin_memory=self.pin_memory)
+        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
+        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
 
         loss_func = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
@@ -139,6 +139,8 @@ class Classifier():
         self.writer.add_graph(self.model, sample_input)
 
         best_val_acc = 0.0
+
+        print(f"Num epoch: {num_epoch} | Batch size: {batch_size} | Initial learning rate: {lr}")
 
         for count_epoch in range(num_epoch):
             print("Epoch:", count_epoch)
@@ -160,7 +162,7 @@ class Classifier():
                 best_val_acc = val_metrics["Val_Acc"]
 
             print(
-                f"Lr: {new_lr} | Loss: {val_metrics['Val_Loss']:.3f} | "
+                f"Lr: {round(new_lr, 8)} | Loss: {val_metrics['Val_Loss']:.3f} | "
                 f"Acc: {val_metrics['Val_Acc']:.3f} | P: {val_metrics['Val_P']:.3f} | "
                 f"R: {val_metrics['Val_R']:.3f} | F1: {val_metrics['Val_F1']:.3f}"
             )
@@ -280,7 +282,7 @@ class Classifier():
         self.model.eval()
         
         testset = SimpsonDataset(path_to_test_data, mode='test')
-        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=self.num_workers, shuffle=False, pin_memory=self.pin_memory)
+        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
         
         all_preds = []
         all_labels = []
