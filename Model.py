@@ -53,22 +53,22 @@ class Model(nn.Module):
             nn.ReLU(),
         )
 
-        # self.conv5 = nn.Sequential(
-        #     nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1),
-        #     nn.BatchNorm2d(256),
-        #     nn.ReLU()
-        # )
+        self.conv5 = nn.Sequential(
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU()
+        )
 
         self.conv6 = nn.Sequential(
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=2),
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.AdaptiveAvgPool2d((1,1))
+            nn.AdaptiveAvgPool2d((2,2))
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(4 * 4 * 256, 2048),
+            nn.Linear(2 * 2 * 256, 2048),
             # nn.Linear(256, 2048),
             nn.BatchNorm1d(2048),
             nn.ReLU(),
@@ -83,11 +83,11 @@ class Model(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
-        # x = self.conv5(x)
+        x = self.conv5(x)
         x = self.conv6(x)
 
-        x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
-        x = x.view(x.size(0), 256 * 4 * 4)
+        # x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
+        x = x.view(x.size(0), 2 * 2 * 256)
 
         x = self.fc1(x)
         x = self.fc2(x)
@@ -111,7 +111,7 @@ class Classifier():
 
     def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
-        self.writer = SummaryWriter(f'meta_data/5conv-fc4*4*256->2048->42')
+        self.writer = SummaryWriter(f'meta_data/6conv-fc2*2*256->2048->42')
 
         train_size = int(0.8 * len(test_val_dataset)) 
         val_size = len(test_val_dataset) - train_size
