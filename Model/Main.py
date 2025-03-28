@@ -7,16 +7,16 @@ path_to_testset = "/home/i.karakulin/Classification-of-the-Simpsons/simpsons dat
 device = get_device()
 model = Classifier(device)
 
+
 model.train(
     path_to_train_and_val=path_to_train_and_val,
-    num_epoch=20,
-    batch_size=256,
-    lr=0.0007,
+    num_epoch=15,
+    batch_size=512,
+    lr=0.0005,
 )
 
-path_to_model = '/home/i.karakulin/Classification-of-the-Simpsons/meta_data/best.tar'
-# path_to_model = '/home/ilya/Documents/Classification-of-the-Simpsons/meta_data/best.tar'
+# path_to_model = '/home/i.karakulin/Classification-of-the-Simpsons/meta_data/10.tar'
 
-model.load_model(path_to_model)
+# model.load_model(path_to_model)
 
-model.test(path_to_testset)
+# model.test(path_to_testset)

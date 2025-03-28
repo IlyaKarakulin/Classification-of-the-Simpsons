@@ -31,7 +31,7 @@ class Model(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2),
-            # nn.BatchNorm2d(32),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.AvgPool2d(kernel_size=3, stride=2)
         )
@@ -66,17 +66,26 @@ class Model(nn.Module):
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.AdaptiveAvgPool2d((2,2))
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(2 * 2 * 256, 2048),
-            # nn.Linear(256, 2048),
+            nn.Linear(4 * 4 * 256, 2048),
             nn.BatchNorm1d(2048),
             nn.ReLU(),
         )
-
         self.fc2 = nn.Sequential(
+            nn.Linear(2048, 2048),
+            nn.BatchNorm1d(2048),
+            nn.ReLU()
+        )
+
+        self.fc3 = nn.Sequential(
+            nn.Linear(2048, 2048),
+            nn.BatchNorm1d(2048),
+            nn.ReLU()
+        )
+
+        self.fc4 = nn.Sequential(
             nn.Linear(2048, n_classes),
         )
 
@@ -88,11 +97,14 @@ class Model(nn.Module):
         x = self.conv5(x)
         x = self.conv6(x)
 
-        # x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
-        x = x.view(x.size(0), 2 * 2 * 256)
+        x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
+        x = x.view(x.size(0), 4 * 4 * 256)
+
 
         x = self.fc1(x)
         x = self.fc2(x)
+        # x = self.fc3(x)
+        x = self.fc4(x)
 
         return x
 
@@ -113,7 +125,7 @@ class Classifier():
 
     def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
         test_val_dataset = SimpsonDataset(path_to_train_and_val)
-        self.writer = SummaryWriter(f'meta_data/6conv-fc2*2*256->2048->42')
+        self.writer = SummaryWriter(f'meta_data/6conv-fc4*4*256->2048->42')
 
         train_size = int(0.8 * len(test_val_dataset)) 
         val_size = len(test_val_dataset) - train_size
@@ -155,9 +167,10 @@ class Classifier():
             all_metrics = train_metrics | val_metrics
             metrics_data.append(all_metrics.values())
             
-            if(val_metrics["Val_Acc"] > best_val_acc):
-                self.__save_model("best")
-                best_val_acc = val_metrics["Val_Acc"]
+            # if(val_metrics["Val_Acc"] > best_val_acc):
+            #     self.__save_model("best")
+            #     best_val_acc = val_metrics["Val_Acc"]
+            self.__save_model(f"{count_epoch}")
 
             print(
                 f"Lr: {round(new_lr, 8)} | Loss: {val_metrics['Val_Loss']:.3f} | "
@@ -316,7 +329,7 @@ class Classifier():
         recall_per_class = recall_score(all_labels, all_preds, average=None, zero_division=True, labels=unique_classes)
         f1_per_class = f1_score(all_labels, all_preds, average=None, zero_division=True, labels=unique_classes)
         
-        label_encoder = pickle.load(open("./meta_data/label_encoder.pkl", 'rb'))
+        label_encoder = pickle.load(open("../meta_data/label_encoder.pkl", 'rb'))
 
         class_metrics = pd.DataFrame({
             'Class': label_encoder.inverse_transform(unique_classes),
@@ -325,5 +338,5 @@ class Classifier():
             'F1': f1_per_class
         })
         
-        class_metrics.to_csv('./meta_data/test_metric.csv', index=False)
+        class_metrics.to_csv('../meta_data/test_metric.csv', index=False)
 

@@ -29,7 +29,7 @@ class SimpsonDataset(Dataset):
                 pickle.dump(self.label_encoder, le_conf)
 
         elif mode == 'test':
-            self.label_encoder = pickle.load(open("./meta_data/label_encoder.pkl", 'rb'))
+            self.label_encoder = pickle.load(open("../meta_data/label_encoder.pkl", 'rb'))
             self.labels = [path.parent.name for path in self.files]
 
         else:
