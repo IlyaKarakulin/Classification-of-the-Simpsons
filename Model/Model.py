@@ -290,6 +290,7 @@ class Classifier():
 
 
     def test(self, path_to_test_data: str, batch_size=32):
+        print("Testing...")
         self.model.eval()
         
         testset = SimpsonDataset(path_to_test_data, mode='test')
