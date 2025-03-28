@@ -31,6 +31,7 @@ class Model(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2),
+            # nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.AvgPool2d(kernel_size=3, stride=2)
         )
@@ -282,7 +283,7 @@ class Classifier():
     def load_model(self, path):
         self.model = Model().to(self.device)
         
-        state_dict = torch.load(path, weights_only=True)
+        state_dict = torch.load(path, weights_only=True, map_location=torch.device(self.device))
         self.model.load_state_dict(state_dict)
         
         self.model.eval()
