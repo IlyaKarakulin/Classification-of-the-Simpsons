@@ -8,6 +8,7 @@ import torch.nn.functional as f
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import pickle
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
@@ -154,7 +155,7 @@ class Classifier():
             metrics_data.append(all_metrics.values())
             
             if(val_metrics["Val_Acc"] > best_val_acc):
-                self.__save_model__("best")
+                self.__save_model("best")
                 best_val_acc = val_metrics["Val_Acc"]
 
             print(
@@ -164,7 +165,7 @@ class Classifier():
             )
 
         self.writer.close()
-        self.__save_model__("lost")
+        self.__save_model("lost")
         data_metrics = pd.DataFrame(metrics_data, columns=['Train_Loss', 'Train_Acc', 'Val_Loss', 'Val_Acc', 'Val_P', 'Val_R', 'Val_F1'])
         data_metrics.to_csv('./meta_data/metrics.csv')
 
@@ -272,7 +273,7 @@ class Classifier():
         return metrics
 
 
-    def __save_model__(self, name):
+    def __save_model(self, name):
         state = self.model.state_dict()
         os.makedirs('./meta_data', exist_ok=True)
         torch.save(state, f"./meta_data/{name}.tar")
@@ -312,22 +313,15 @@ class Classifier():
         precision_per_class = precision_score(all_labels, all_preds, average=None, zero_division=True, labels=unique_classes)
         recall_per_class = recall_score(all_labels, all_preds, average=None, zero_division=True, labels=unique_classes)
         f1_per_class = f1_score(all_labels, all_preds, average=None, zero_division=True, labels=unique_classes)
-                
+        
+        label_encoder = pickle.load(open("./meta_data/label_encoder.pkl", 'rb'))
+
         class_metrics = pd.DataFrame({
-            'Class': unique_classes,
+            'Class': label_encoder.inverse_transform(unique_classes),
             'Precision': precision_per_class,
             'Recall': recall_per_class,
             'F1': f1_per_class
         })
         
         class_metrics.to_csv('./meta_data/test_metric.csv', index=False)
-
-        self.writer.add_text('Test Metrics', f'''
-            Precision: {np.mean(precision_per_class):.3f}
-            Recall: {np.mean(recall_per_class):.3f}
-            F1: {np.mean(f1_per_class):.3f}
-        ''')
-        
-        self.writer.close()
-
 
