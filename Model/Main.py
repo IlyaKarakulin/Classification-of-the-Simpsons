@@ -8,12 +8,12 @@ device = get_device()
 model = Classifier(device)
 
 
-model.train(
-    path_to_train_and_val=path_to_train_and_val,
-    num_epoch=15,
-    batch_size=512,
-    lr=0.0005,
-)
+# model.train(
+#     path_to_train_and_val=path_to_train_and_val,
+#     num_epoch=15,
+#     batch_size=512,
+#     lr=0.0005,
+# )
 
 # path_to_model = '/home/i.karakulin/Classification-of-the-Simpsons/meta_data/10.tar'
 
