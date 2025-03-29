@@ -4,6 +4,7 @@
 /data 
 /data\ copy
 /data.tar
-/simpsons dataset
-/simpsons dataset copy
+/dataset
+/dataset copy
 /Model/__pycache__
+/dataset.tar.gz
