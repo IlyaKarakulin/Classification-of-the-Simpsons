@@ -18,7 +18,7 @@ class SimpsonDataset(Dataset):
         self._len = len(self.files)
 
 
-        if mode == 'train' or mode == 'val':
+        if mode == 'train':
             self.label_encoder = LabelEncoder()
 
             self.labels = [path.parent.name for path in self.files]
@@ -28,8 +28,8 @@ class SimpsonDataset(Dataset):
             with open('./meta_data/label_encoder.pkl', 'wb') as le_conf:
                 pickle.dump(self.label_encoder, le_conf)
 
-        elif mode == 'test':
-            self.label_encoder = pickle.load(open("../meta_data/label_encoder.pkl", 'rb'))
+        elif mode == 'test' or mode == 'val':
+            self.label_encoder = pickle.load(open("./meta_data/label_encoder.pkl", 'rb'))
             self.labels = [path.parent.name for path in self.files]
 
         else:

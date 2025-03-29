@@ -123,14 +123,11 @@ class Classifier():
             self.pin_memory = True
 
 
-    def train(self, path_to_train_and_val: str, num_epoch=1, batch_size=32, lr=0.001):
-        test_val_dataset = SimpsonDataset(path_to_train_and_val)
-        self.writer = SummaryWriter(f'meta_data/6conv-fc4*4*256->2048->42')
+    def train(self, path_to_train: str, path_to_val: str, num_epoch=1, batch_size=32, lr=0.001):
+        train_dataset = SimpsonDataset(path_to_train, mode='train')
+        val_dataset = SimpsonDataset(path_to_val, mode='val')
 
-        train_size = int(0.8 * len(test_val_dataset)) 
-        val_size = len(test_val_dataset) - train_size
-
-        train_dataset, val_dataset = random_split(test_val_dataset, [train_size, val_size])
+        self.writer = SummaryWriter(f'meta_data/MyModel')
 
         Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
         Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
@@ -139,12 +136,8 @@ class Classifier():
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer,
-            mode='min',
-            factor=0.1,
-            patience=2,
-        )
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=2)
+
         metrics_data = []
         self.model.train()
 
@@ -170,6 +163,7 @@ class Classifier():
             # if(val_metrics["Val_Acc"] > best_val_acc):
             #     self.__save_model("best")
             #     best_val_acc = val_metrics["Val_Acc"]
+
             self.__save_model(f"{count_epoch}")
 
             print(
@@ -329,7 +323,7 @@ class Classifier():
         recall_per_class = recall_score(all_labels, all_preds, average=None, zero_division=True, labels=unique_classes)
         f1_per_class = f1_score(all_labels, all_preds, average=None, zero_division=True, labels=unique_classes)
         
-        label_encoder = pickle.load(open("../meta_data/label_encoder.pkl", 'rb'))
+        label_encoder = pickle.load(open("./meta_data/label_encoder.pkl", 'rb'))
 
         class_metrics = pd.DataFrame({
             'Class': label_encoder.inverse_transform(unique_classes),
@@ -338,5 +332,5 @@ class Classifier():
             'F1': f1_per_class
         })
         
-        class_metrics.to_csv('../meta_data/test_metric.csv', index=False)
+        class_metrics.to_csv('./meta_data/test_metric.csv', index=False)
 
