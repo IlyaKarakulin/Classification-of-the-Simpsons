@@ -31,46 +31,45 @@ class Model(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
+            nn.MaxPool2d(3, stride=2)
         )
 
         self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)
         )
 
         self.conv3 = nn.Sequential(
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
 
         self.conv4 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2)
-        )
-
-        self.conv5 = nn.Sequential(
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
-        self.conv6 = nn.Sequential(
+        self.conv5 = nn.Sequential(
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)
+            nn.MaxPool2d(2, stride=2)
+        )
+
+        self.conv6 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
         )
 
         self.conv7 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
         )
@@ -79,25 +78,39 @@ class Model(nn.Module):
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)
+            nn.MaxPool2d(2, stride=2)
         )
 
-        # self.conv9 = nn.Sequential(
-        #     nn.Conv2d(in_channels=512, out_channels=512, kernel_size=2),
-        #     nn.BatchNorm2d(512),
-        #     nn.ReLU(),
-        #     nn.MaxPool2d(kernel_size=3, stride=2),
-        # )
-
-        self.fc1 = nn.Sequential(
-            nn.Linear(4 * 4 * 256, 2048),
-            nn.BatchNorm1d(2048),
+        self.conv9 = nn.Sequential(
+            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1),
+            nn.BatchNorm2d(512),
             nn.ReLU(),
         )
 
-        self.fc2 = nn.Sequential(
-            nn.Linear(2048, n_classes),
+        self.conv10 = nn.Sequential(
+            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
         )
+
+        self.conv11 = nn.Sequential(
+            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            nn.AdaptiveMaxPool2d((1,1))
+        )
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(512, 1024),
+            nn.BatchNorm1d(1024),
+            nn.ReLU()
+        )
+
+        self.fc2 = nn.Sequential(
+            nn.Linear(1024, n_classes),
+            nn.Softmax(dim=1)
+        )
+
 
     def forward(self, x):
         x = self.conv1(x)
@@ -108,11 +121,12 @@ class Model(nn.Module):
         x = self.conv6(x)
         x = self.conv7(x)
         x = self.conv8(x)
-
+        x = self.conv9(x)
+        x = self.conv10(x)
         # print(x.size())
+        x = self.conv11(x)
 
-        x = x.view(x.size(0), 4 * 4 * 256)
-
+        x = x.view(x.size(0), 512)
 
         x = self.fc1(x)
         x = self.fc2(x)
