@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as f
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
+from torchsummary import summary
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import pickle
 from tqdm import tqdm
@@ -30,62 +31,71 @@ class Model(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=7, stride=2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.AvgPool2d(kernel_size=3, stride=2)
         )
 
         self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.AvgPool2d(kernel_size=3, stride=2)
+            nn.MaxPool2d(2, 2)
         )
 
         self.conv3 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
         )
 
         self.conv4 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
+            nn.MaxPool2d(2, 2)
         )
 
         self.conv5 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU()
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
         )
 
         self.conv6 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=2),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)
+        )
+
+        self.conv7 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
         )
+
+        self.conv8 = nn.Sequential(
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)
+        )
+
+        # self.conv9 = nn.Sequential(
+        #     nn.Conv2d(in_channels=512, out_channels=512, kernel_size=2),
+        #     nn.BatchNorm2d(512),
+        #     nn.ReLU(),
+        #     nn.MaxPool2d(kernel_size=3, stride=2),
+        # )
 
         self.fc1 = nn.Sequential(
             nn.Linear(4 * 4 * 256, 2048),
             nn.BatchNorm1d(2048),
             nn.ReLU(),
         )
+
         self.fc2 = nn.Sequential(
-            nn.Linear(2048, 2048),
-            nn.BatchNorm1d(2048),
-            nn.ReLU()
-        )
-
-        self.fc3 = nn.Sequential(
-            nn.Linear(2048, 2048),
-            nn.BatchNorm1d(2048),
-            nn.ReLU()
-        )
-
-        self.fc4 = nn.Sequential(
             nn.Linear(2048, n_classes),
         )
 
@@ -96,15 +106,16 @@ class Model(nn.Module):
         x = self.conv4(x)
         x = self.conv5(x)
         x = self.conv6(x)
+        x = self.conv7(x)
+        x = self.conv8(x)
 
-        x = f.interpolate(x, size=(4, 4), align_corners=False, mode='bilinear')
+        # print(x.size())
+
         x = x.view(x.size(0), 4 * 4 * 256)
 
 
         x = self.fc1(x)
         x = self.fc2(x)
-        # x = self.fc3(x)
-        x = self.fc4(x)
 
         return x
 
@@ -113,6 +124,7 @@ class Classifier():
     def __init__(self, device='cpu'):
         self.device = device
         self.model = Model().to(self.device)
+
         self.writer = None 
 
         if self.device == 'cpu':
