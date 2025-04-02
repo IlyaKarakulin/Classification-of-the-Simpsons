@@ -18,7 +18,7 @@ from Dataset import SimpsonDataset
 
 def get_device():
     if torch.cuda.is_available():
-        device = torch.device("cuda:2")
+        device = torch.device("cuda:3")
         print(f"Using GPU: {torch.cuda.get_device_name(0)}")
     else:
         device = torch.device("cpu")
@@ -31,10 +31,9 @@ class Model(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=2),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(3, stride=2)
         )
 
         self.conv2 = nn.Sequential(
@@ -44,64 +43,32 @@ class Model(nn.Module):
         )
 
         self.conv3 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
         self.conv4 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
         self.conv5 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.MaxPool2d(2, stride=2)
         )
 
         self.conv6 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-        )
-
-        self.conv7 = nn.Sequential(
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-        )
-
-        self.conv8 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(2, stride=2)
-        )
-
-        self.conv9 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(),
-        )
-
-        self.conv10 = nn.Sequential(
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(),
-        )
-
-        self.conv11 = nn.Sequential(
-            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(),
-            nn.AdaptiveMaxPool2d((1,1))
+            nn.AdaptiveAvgPool2d((1, 1))
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(512, 1024),
+            nn.Linear(256, 1024),
             nn.BatchNorm1d(1024),
             nn.ReLU()
         )
@@ -118,15 +85,11 @@ class Model(nn.Module):
         x = self.conv3(x)
         x = self.conv4(x)
         x = self.conv5(x)
-        x = self.conv6(x)
-        x = self.conv7(x)
-        x = self.conv8(x)
-        x = self.conv9(x)
-        x = self.conv10(x)
         # print(x.size())
-        x = self.conv11(x)
+        x = self.conv6(x)
+        # print(x.size())
 
-        x = x.view(x.size(0), 512)
+        x = x.view(x.size(0), 256)
 
         x = self.fc1(x)
         x = self.fc2(x)
@@ -149,7 +112,7 @@ class Classifier():
             self.pin_memory = True
 
 
-    def train(self, path_to_train: str, path_to_val: str, num_epoch=1, batch_size=32, lr=0.001):
+    def train(self, path_to_train: str, path_to_val: str, num_epoch=100, batch_size=64, lr=0.005):
         train_dataset = SimpsonDataset(path_to_train, mode='train')
         val_dataset = SimpsonDataset(path_to_val, mode='val')
 
@@ -159,25 +122,24 @@ class Classifier():
         Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
 
         loss_func = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=2)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', factor=0.1, patience=6)
 
         metrics_data = []
         self.model.train()
 
-        best_val_acc = 0.0
+        best_val_f1 = 0.0
 
         print(f"Num epoch: {num_epoch} | Batch size: {batch_size} | Initial learning rate: {lr}")
 
         for count_epoch in range(num_epoch):
             print("Epoch:", count_epoch)
 
-            train_metrics = self.epoch(count_epoch, Simpson_dataloader_train, optimizer, loss_func)
+            train_metrics = self.epoch(count_epoch, Simpson_dataloader_train, self.optimizer, loss_func)
             val_metrics = self.validation(Simpson_dataloader_val, loss_func)
 
-            self.scheduler.step(val_metrics['Val_Loss'])
+            self.scheduler.step(val_metrics['Val_F1'])
             new_lr = self.optimizer.param_groups[0]['lr']
 
             self.__log_metrics(train_metrics, val_metrics, count_epoch)
@@ -186,14 +148,14 @@ class Classifier():
             all_metrics = train_metrics | val_metrics
             metrics_data.append(all_metrics.values())
             
-            # if(val_metrics["Val_Acc"] > best_val_acc):
-            #     self.__save_model("best")
-            #     best_val_acc = val_metrics["Val_Acc"]
+            if(val_metrics["Val_F1"] > best_val_f1):
+                self.__save_model("best")
+                best_val_f1 = val_metrics["Val_F1"]
 
-            self.__save_model(f"{count_epoch}")
+            # self.__save_model(f"{count_epoch}")
 
             print(
-                f"Lr: {round(new_lr, 8)} | Loss: {val_metrics['Val_Loss']:.3f} | "
+                f"Lr: {round(new_lr, 8)} | Loss Train: {train_metrics['Train_Loss']:.3f} | Loss Val: {val_metrics['Val_F1']:.3f} | "
                 f"Acc: {val_metrics['Val_Acc']:.3f} | P: {val_metrics['Val_P']:.3f} | "
                 f"R: {val_metrics['Val_R']:.3f} | F1: {val_metrics['Val_F1']:.3f}"
             )
