@@ -44,25 +44,44 @@ class Model(nn.Module):
         )
 
         self.conv3 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
         )
 
         self.conv4 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
         self.conv5 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2),
-            nn.BatchNorm2d(256),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
         )
 
         self.conv6 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+        )
+
+        self.conv7 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+        )
+
+        self.conv8 = nn.Sequential(
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+        )
+
+        self.conv9 = nn.Sequential(
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
+            nn.MaxPool2d(2),
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1))
@@ -86,8 +105,10 @@ class Model(nn.Module):
         x = self.conv3(x)
         x = self.conv4(x)
         x = self.conv5(x)
-        # print(x.size())
         x = self.conv6(x)
+        x = self.conv7(x)
+        x = self.conv8(x)
+        x = self.conv9(x)
         # print(x.size())
 
         x = x.view(x.size(0), 256)
@@ -113,7 +134,7 @@ class Classifier():
             self.pin_memory = True
 
 
-    def train(self, path_to_train: str, path_to_val: str, num_epoch=100, batch_size=64, lr=0.01):
+    def train(self, path_to_train: str, path_to_val: str, num_epoch=100, batch_size=64, lr=0.001):
         train_dataset = SimpsonDataset(path_to_train, mode='train')
         val_dataset = SimpsonDataset(path_to_val, mode='val')
 
@@ -156,7 +177,7 @@ class Classifier():
             # self.__save_model(f"{count_epoch}")
 
             print(
-                f"Lr: {round(new_lr, 8)} | Loss Train: {train_metrics['Train_Loss']:.3f} | Loss Val: {val_metrics['Val_F1']:.3f} | "
+                f"Lr: {round(new_lr, 8)} | Loss Train: {train_metrics['Train_Loss']:.3f} | Loss Val: {val_metrics['Val_Loss']:.3f} | "
                 f"Acc: {val_metrics['Val_Acc']:.3f} | P: {val_metrics['Val_P']:.3f} | "
                 f"R: {val_metrics['Val_R']:.3f} | F1: {val_metrics['Val_F1']:.3f}"
             )
