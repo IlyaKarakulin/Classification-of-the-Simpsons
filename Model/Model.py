@@ -91,18 +91,18 @@ class Model(nn.Module):
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.AdaptiveAvgPool2d((1, 1))
+            # nn.AdaptiveAvgPool2d((1, 1))
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(256, 512),
-            nn.BatchNorm1d(512),
+            nn.Linear(5 * 5 * 256, 1024),
+            nn.BatchNorm1d(1024),
             nn.Dropout(0.5),
             nn.ReLU()
         )
 
         self.fc2 = nn.Sequential(
-            nn.Linear(512, n_classes),
+            nn.Linear(1024, n_classes),
         )
 
 
@@ -119,7 +119,7 @@ class Model(nn.Module):
         x = self.conv10(x)
         # print(x.size())
 
-        x = x.view(x.size(0), 256)
+        x = x.view(x.size(0), 5 * 5 * 256)
 
         x = self.fc1(x)
         x = self.fc2(x)
