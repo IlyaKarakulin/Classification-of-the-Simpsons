@@ -51,6 +51,7 @@ class Model(nn.Module):
 
         self.conv4 = nn.Sequential(
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
+            nn.MaxPool2d(2),
             nn.BatchNorm2d(128),
             nn.ReLU(),
         )
@@ -69,6 +70,7 @@ class Model(nn.Module):
 
         self.conv7 = nn.Sequential(
             nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1),
+            nn.MaxPool2d(2),
             nn.BatchNorm2d(256),
             nn.ReLU(),
         )
@@ -81,7 +83,12 @@ class Model(nn.Module):
 
         self.conv9 = nn.Sequential(
             nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
-            nn.MaxPool2d(2),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+        )
+
+        self.conv10 = nn.Sequential(
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1))
@@ -109,6 +116,7 @@ class Model(nn.Module):
         x = self.conv7(x)
         x = self.conv8(x)
         x = self.conv9(x)
+        x = self.conv10(x)
         # print(x.size())
 
         x = x.view(x.size(0), 256)
