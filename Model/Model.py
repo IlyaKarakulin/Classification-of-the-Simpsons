@@ -31,7 +31,8 @@ class Model(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=2),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1),
+            nn.MaxPool2d(2),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -68,14 +69,14 @@ class Model(nn.Module):
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(256, 1024),
-            nn.BatchNorm1d(1024),
+            nn.Linear(256, 512),
+            nn.BatchNorm1d(512),
+            nn.Dropout(0.5),
             nn.ReLU()
         )
 
         self.fc2 = nn.Sequential(
-            nn.Linear(1024, n_classes),
-            nn.Softmax(dim=1)
+            nn.Linear(512, n_classes),
         )
 
 
@@ -112,7 +113,7 @@ class Classifier():
             self.pin_memory = True
 
 
-    def train(self, path_to_train: str, path_to_val: str, num_epoch=100, batch_size=64, lr=0.005):
+    def train(self, path_to_train: str, path_to_val: str, num_epoch=100, batch_size=64, lr=0.01):
         train_dataset = SimpsonDataset(path_to_train, mode='train')
         val_dataset = SimpsonDataset(path_to_val, mode='val')
 
@@ -123,8 +124,8 @@ class Classifier():
 
         loss_func = nn.CrossEntropyLoss()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', factor=0.1, patience=6)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=lr, weight_decay=0.02)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=6)
 
         metrics_data = []
         self.model.train()
@@ -139,7 +140,7 @@ class Classifier():
             train_metrics = self.epoch(count_epoch, Simpson_dataloader_train, self.optimizer, loss_func)
             val_metrics = self.validation(Simpson_dataloader_val, loss_func)
 
-            self.scheduler.step(val_metrics['Val_F1'])
+            self.scheduler.step(train_metrics['Train_Loss'])
             new_lr = self.optimizer.param_groups[0]['lr']
 
             self.__log_metrics(train_metrics, val_metrics, count_epoch)
