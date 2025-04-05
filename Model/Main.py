@@ -15,7 +15,7 @@ model = Classifier(device)
 model.train(
     path_to_train=path_to_train,
     path_to_val=path_to_val,
-    num_epoch=30,
+    num_epoch=60,
     batch_size=128,
     lr=0.005
 )
