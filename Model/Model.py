@@ -15,7 +15,7 @@ from Dataset import SimpsonDataset
 
 def get_device():
     if torch.cuda.is_available():
-        device = torch.device("cuda:3")
+        device = torch.device("cuda:1")
         print(f"Using GPU: {torch.cuda.get_device_name(0)}")
     else:
         device = torch.device("cpu")
@@ -29,7 +29,7 @@ class Model(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1),
-            nn.MaxPool2d(2),
+            # nn.MaxPool2d(2),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -48,7 +48,7 @@ class Model(nn.Module):
 
         self.conv4 = nn.Sequential(
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
-            # nn.MaxPool2d(2),
+            nn.MaxPool2d(2),
             nn.BatchNorm2d(128),
             nn.ReLU(),
         )
