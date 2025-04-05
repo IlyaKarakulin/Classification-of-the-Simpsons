@@ -28,7 +28,7 @@ class Model(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=2),
             # nn.MaxPool2d(2),
             nn.BatchNorm2d(64),
             nn.ReLU(),
