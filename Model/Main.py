@@ -17,5 +17,5 @@ model.train(
     path_to_val=path_to_val,
     num_epoch=60,
     batch_size=128,
-    lr=0.005
+    lr=0.003
 )

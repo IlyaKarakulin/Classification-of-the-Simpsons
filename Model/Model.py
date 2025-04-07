@@ -147,7 +147,7 @@ class Classifier():
         train_dataset = SimpsonDataset(path_to_train, mode='train')
         val_dataset = SimpsonDataset(path_to_val, mode='val')
 
-        self.writer = SummaryWriter(f'meta_data/lr=0.005_dr=0.5_wd=0.02_ResNet')
+        self.writer = SummaryWriter(f'meta_data/lr=0.005_dr=0.5_wd=0.02_ResNet_clr_dataset')
 
         Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
         Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
@@ -156,7 +156,7 @@ class Classifier():
         loss_func = FocalLoss(gamma=1.5, reduction='mean')
 
         self.optimizer = optim.AdamW(self.model.parameters(), lr=lr, weight_decay=0.02)
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=6)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=4)
 
         metrics_data = []
         self.model.train()
