@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
+import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import pickle
 from tqdm import tqdm
@@ -23,104 +24,107 @@ def get_device():
 
     return device
 
+
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=2.0, reduction='mean'):
+        super().__init__()
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        probs = F.softmax(inputs, dim=1)
+        
+        class_probs = probs.gather(1, targets.view(-1, 1)).squeeze(1)
+        
+        ce_loss = -torch.log(class_probs + 1e-6)        
+
+        focal_loss = (1 - class_probs) ** self.gamma * ce_loss
+
+        if self.reduction == 'mean':
+            return focal_loss.mean()
+        elif self.reduction == 'sum':
+            return focal_loss.sum()
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1, projection=False):
+        super().__init__()
+
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU()
+        )
+
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels)
+        )
+
+        self.relu = nn.ReLU()
+
+        self.projection = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride),
+            nn.BatchNorm2d(out_channels)
+        ) if projection else None
+
+    def forward(self, x):
+        residual = x
+        out = self.conv1(x)
+        out = self.conv2(out)
+
+        if self.projection:
+            residual = self.projection(residual)
+
+        out += residual
+        out = self.relu(out)
+        return out
+
 class Model(nn.Module):
     def __init__(self, n_classes=42):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1),
-            # nn.MaxPool2d(2),
+            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
             nn.BatchNorm2d(64),
             nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
 
-        self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-        )
-
-        self.conv3 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-        )
-
-        self.conv4 = nn.Sequential(
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2),
-            # nn.MaxPool2d(2),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-        )
-
-        self.conv5 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-        )
-
-        self.conv6 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-        )
-
-        self.conv7 = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2),
-            # nn.MaxPool2d(2),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-        )
-
-        self.conv8 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-        )
-
-        self.conv9 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-        )
-
-        self.conv10 = nn.Sequential(
-            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d((1, 1))
-        )
-
-        self.fc1 = nn.Sequential(
+        self.block1 = ResidualBlock(64, 64)
+        self.block2 = ResidualBlock(64, 64)
+        
+        self.block3 = ResidualBlock(64, 128, stride=2, projection=True)
+        self.block4 = ResidualBlock(128, 128)
+        
+        self.block5 = ResidualBlock(128, 256, stride=2, projection=True)
+        self.block6 = ResidualBlock(256, 256)
+        
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        
+        self.fc = nn.Sequential(
             nn.Linear(256, 512),
             nn.BatchNorm1d(512),
             nn.Dropout(0.5),
-            nn.ReLU()
-        )
-
-        self.fc2 = nn.Sequential(
-            nn.Linear(512, n_classes),
-        )
-
-
+            nn.ReLU(),
+            nn.Linear(512, n_classes))
+        
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
-        x = self.conv6(x)
-        x = self.conv7(x)
-        x = self.conv8(x)
-        x = self.conv9(x)
-        x = self.conv10(x)
+        x = self.conv1(x)          # [B, 64, H/4, W/4]
+        
+        x = self.block1(x)         # [B, 64, H/4, W/4]
+        x = self.block2(x)         # [B, 64, H/4, W/4]
+        
+        x = self.block3(x)         # [B, 128, H/8, W/8]
+        x = self.block4(x)         # [B, 128, H/8, W/8]
+        
+        x = self.block5(x)         # [B, 256, H/16, W/16]
+        x = self.block6(x)         # [B, 256, H/16, W/16]
         # print(x.size())
-
-        x = x.view(x.size(0), 256)
-
-        x = self.fc1(x)
-        x = self.fc2(x)
-
+        x = self.avgpool(x)        # [B, 256, 1, 1]
+        x = x.view(x.size(0), -1)  # [B, 256]
+        x = self.fc(x)             # [B, n_classes]
+        
         return x
 
 
@@ -143,12 +147,13 @@ class Classifier():
         train_dataset = SimpsonDataset(path_to_train, mode='train')
         val_dataset = SimpsonDataset(path_to_val, mode='val')
 
-        self.writer = SummaryWriter(f'meta_data/MyModel')
+        self.writer = SummaryWriter(f'meta_data/lr=0.005_dr=0.5_wd=0.02_ResNet')
 
         Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
         Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
 
-        loss_func = nn.CrossEntropyLoss()
+        # loss_func = nn.CrossEntropyLoss()
+        loss_func = FocalLoss(gamma=1.5, reduction='mean')
 
         self.optimizer = optim.AdamW(self.model.parameters(), lr=lr, weight_decay=0.02)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=6)
@@ -182,7 +187,8 @@ class Classifier():
             # self.__save_model(f"{count_epoch}")
 
             print(
-                f"Lr: {round(new_lr, 8)} | Loss Train: {train_metrics['Train_Loss']:.3f} | Loss Val: {val_metrics['Val_Loss']:.3f} | "
+                f"Lr: {round(new_lr, 8)} | Loss Train: {train_metrics['Train_Loss']:.3f} | "
+                f"Acc Train {train_metrics['Train_Acc']:.3f} | Loss Val: {val_metrics['Val_Loss']:.3f} | "
                 f"Acc: {val_metrics['Val_Acc']:.3f} | P: {val_metrics['Val_P']:.3f} | "
                 f"R: {val_metrics['Val_R']:.3f} | F1: {val_metrics['Val_F1']:.3f}"
             )
