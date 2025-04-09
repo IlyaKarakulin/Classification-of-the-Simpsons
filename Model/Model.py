@@ -85,10 +85,10 @@ class Model(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, 64, kernel_size=5, stride=2, padding=3),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+            # nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
 
         self.block1 = ResidualBlock(64, 64)
@@ -147,7 +147,7 @@ class Classifier():
         train_dataset = SimpsonDataset(path_to_train, mode='train')
         val_dataset = SimpsonDataset(path_to_val, mode='val')
 
-        self.writer = SummaryWriter(f'meta_data/lr=0.005_dr=0.5_wd=0.02_ResNet_clr_dataset')
+        self.writer = SummaryWriter(f'meta_data/lr=0.005_dr=0.5_wd=0.02_ResNet_clr_dataset_small_1_conv')
 
         Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
         Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)

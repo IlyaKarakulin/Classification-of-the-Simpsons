@@ -14,7 +14,14 @@ class SimpsonDataset(Dataset):
 
         self.mode = mode
         self.path_to_files = Path(path_to_files)
-        self.files = list(self.path_to_files.rglob('*.jpg'))
+
+        IMAGE_EXTS = {'.jpg', '.jpeg', '.png'}
+
+        self.files = [
+            p for p in self.path_to_files.rglob('*')
+            if p.suffix.lower() in IMAGE_EXTS
+        ]
+
         self._len = len(self.files)
 
 
@@ -36,7 +43,7 @@ class SimpsonDataset(Dataset):
             pass
 
     def load_sample(self, file):
-        image = Image.open(file)
+        image = Image.open(file).convert('RGB') 
         image.load()
 
         return image, image.size
