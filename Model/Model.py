@@ -110,20 +110,20 @@ class Model(nn.Module):
             nn.Linear(512, n_classes))
         
     def forward(self, x):
-        x = self.conv1(x)          # [B, 64, H/4, W/4]
+        x = self.conv1(x)        
         
-        x = self.block1(x)         # [B, 64, H/4, W/4]
-        x = self.block2(x)         # [B, 64, H/4, W/4]
+        x = self.block1(x)       
+        x = self.block2(x)       
         
-        x = self.block3(x)         # [B, 128, H/8, W/8]
-        x = self.block4(x)         # [B, 128, H/8, W/8]
+        x = self.block3(x)       
+        x = self.block4(x)       
         
-        x = self.block5(x)         # [B, 256, H/16, W/16]
-        x = self.block6(x)         # [B, 256, H/16, W/16]
-        # print(x.size())
-        x = self.avgpool(x)        # [B, 256, 1, 1]
-        x = x.view(x.size(0), -1)  # [B, 256]
-        x = self.fc(x)             # [B, n_classes]
+        x = self.block5(x)       
+        x = self.block6(x)       
+
+        x = self.avgpool(x)      
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)           
         
         return x
 
@@ -147,7 +147,7 @@ class Classifier():
         train_dataset = SimpsonDataset(path_to_train, mode='train')
         val_dataset = SimpsonDataset(path_to_val, mode='val')
 
-        self.writer = SummaryWriter(f'meta_data/lr=0.005_dr=0.5_wd=0.02_ResNet_clr_dataset_small_1_conv')
+        self.writer = SummaryWriter(f'meta_data/metrics')
 
         Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
         Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
