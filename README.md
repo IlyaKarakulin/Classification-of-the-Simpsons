@@ -2,7 +2,7 @@
 
 My first computer vision project is the Classification of the Simpsons. The idea of the task was taken from the competition https://www.kaggle.com/datasets/alexattia/the-simpsons-characters-dataset. 
 
-### Dataset
+## Dataset
 
 The dataset offered in the competition is severely unbalanced. Some classes have 3 pictures. 
 
