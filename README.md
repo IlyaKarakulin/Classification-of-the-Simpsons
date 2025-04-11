@@ -117,7 +117,7 @@ Focal loss is used instead of cross entropy. This gave some increase in accuracy
 
 $$ \mathcal{L}_{\text{focal}}(p) = -\alpha \cdot (1 - p)^{\gamma} \cdot \log(p) $$
 
-## Metric
+## Metrics
 
 To see in detail the metrics, the distribution of weights on each layer, the gradients, you can clone the repository and run:
 
@@ -129,3 +129,8 @@ tensorboard --logdir=meta_data
 
 Graph for F1 on validation, which you can see in the tensorboard:
 ![screenshot](./img/F1_on_val.png)
+
+The best F1 on validation is 0.96. This is the average of the classes.
+
+Below are the metrics on the test, вы можете посмотреть precision, recall and F1 for each classes. They are higher than on validation because augmentation is easier on test
+![screenshot](./img/metrics_on_test.png)
