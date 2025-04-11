@@ -196,7 +196,7 @@ class Classifier():
         self.writer.close()
         self.__save_model("lost")
         data_metrics = pd.DataFrame(metrics_data, columns=['Train_Loss', 'Train_Acc', 'Val_Loss', 'Val_Acc', 'Val_P', 'Val_R', 'Val_F1'])
-        data_metrics.to_csv('./meta_data/metrics.csv')
+        data_metrics.to_csv('./meta_data/metrics_on_val.csv')
 
 
     def epoch(self, count_epoch, train_dataloader, optimizer, loss_func):
@@ -353,5 +353,5 @@ class Classifier():
             'F1': f1_per_class
         })
         
-        class_metrics.to_csv('./meta_data/test_metric.csv', index=False)
+        class_metrics.to_csv('./meta_data/metrics_on_test.csv', index=False)
 

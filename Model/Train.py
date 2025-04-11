@@ -9,7 +9,7 @@ device = get_device()
 model = Classifier(device)
 
 # You can start learning from a pre-trained model
-# path_to_model = '/home/i.karakulin/Classification-of-the-Simpsons/meta_data/best.tar'
+# path_to_model = '../meta_data/best.tar'
 # model.load_model(path_to_model)
 
 model.train(

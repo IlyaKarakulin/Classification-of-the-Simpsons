@@ -134,6 +134,13 @@ The best F1 on validation is 0.96. This is the average of the classes.
 
 In the file img/metric_on_test.png you can see the precision, recall and F1 for each class on the test sample. They are higher than in validation because augmentation is easier in testing.
 
+## Additions
+
+- To understand how the model works, hooks have been derived. You can find them in the file Model/hooks.ipynb
+- The model automatically detects the device, if GPU is available, it runs on it, as well as the model trained on GPU can be launched on inference on the cpu without any problems
+- Weights are in the file meta_data/best.tar
+You can load them with **model.load_model(path_to_weights)**
+
 ## Conclusion
 
 Don't judge harshly, this is my first deep learning and computer vision project. I will be glad if this material will be useful for you 
