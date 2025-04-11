@@ -126,3 +126,6 @@ git clone https://github.com/IlyaKarakulin/Classification-of-the-Simpsons.git
 cd Classification-of-the-Simpsons
 tensorboard --logdir=meta_data
 ```
+
+Graph for F1 on validation, which you can see in the tensorboard:
+![screenshot](./img/F1_on_val.png)
