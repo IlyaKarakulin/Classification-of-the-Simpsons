@@ -133,3 +133,7 @@ Graph for F1 on validation, which you can see in the tensorboard:
 The best F1 on validation is 0.96. This is the average of the classes.
 
 In the file img/metric_on_test.png you can see the precision, recall and F1 for each class on the test sample. They are higher than in validation because augmentation is easier in testing.
+
+## Conclusion
+
+Don't judge harshly, this is my first deep learning and computer vision project. I will be glad if this material will be useful for you 
