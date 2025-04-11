@@ -115,8 +115,7 @@ There have been many other attempts, starting with AlexNet, to understand how di
 ## Loss
 Focal loss is used instead of cross entropy. This gave some increase in accuracy.
 
-L_{focal}(p) = - \alpha (1 - p)^{\gamma} \log{p}
-
+$$ \mathcal{L}_{\text{focal}}(p) = -\alpha \cdot (1 - p)^{\gamma} \cdot \log(p) $$
 
 ## Metric
 
