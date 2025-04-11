@@ -119,4 +119,10 @@ $$ \mathcal{L}_{\text{focal}}(p) = -\alpha \cdot (1 - p)^{\gamma} \cdot \log(p) 
 
 ## Metric
 
+To see in detail the metrics, the distribution of weights on each layer, the gradients, you can clone the repository and run:
+
+``` bash
+git clone https://github.com/IlyaKarakulin/Classification-of-the-Simpsons.git
+cd Classification-of-the-Simpsons
 tensorboard --logdir=meta_data
+```
