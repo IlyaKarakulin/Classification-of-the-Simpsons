@@ -14,7 +14,7 @@ Balancing the dataset with only augmentation is not a good idea because training
 
 Therefore, new images were found for each class. A minimum of 80 images for training and 20 for validation. Then the set was augmented to 1163 for training and 290 for validation for each class. As a result, we obtained a balanced dataset in which the images with validation are different from the training images.
 
-it's been published on google drive and can be downloaded using command.
+it's been published on Google drive and can be downloaded using command.
 
 ```bash 
 pip install gdown
@@ -24,7 +24,7 @@ tar -xJf ./simpsons_dataset/dataset.tar.xz
 
 ## Model
 
-So you don't have to figure out the code, I'm publishing the model
+So you don't have to figure out the code, I'm publishing the model.
 
 ```python
 class ResidualBlock(nn.Module):
@@ -112,5 +112,12 @@ class Model(nn.Module):
 
 There have been many other attempts, starting with AlexNet, to understand how different architectures behave. Eventually I went through the evolution of ImageNet and came to the residual network
 
+## Loss
+Focal loss is used instead of cross entropy. This gave some increase in accuracy.
+
+L_{focal}(p) = - \alpha (1 - p)^{\gamma} \log{p}
+
+
+## Metric
 
 tensorboard --logdir=meta_data
