@@ -1,8 +1,8 @@
 import os
+import pickle
 
 from torch.utils.data import Dataset
 from sklearn.preprocessing import LabelEncoder
-import pickle
 from PIL import Image
 from torchvision import transforms
 from pathlib import Path
@@ -42,7 +42,7 @@ class SimpsonDataset(Dataset):
         else:
             pass
 
-    def load_sample(self, file):
+    def __load_sample(self, file):
         image = Image.open(file).convert('RGB') 
         image.load()
 
@@ -50,7 +50,7 @@ class SimpsonDataset(Dataset):
     
     def __getitem__(self, index):
 
-        x, _ = self.load_sample(self.files[index])
+        x, _ = self.__load_sample(self.files[index])
 
         transforms_img = transforms.Compose([
             transforms.Resize((128, 128)),
