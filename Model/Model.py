@@ -149,8 +149,8 @@ class Classifier():
 
         self.writer = SummaryWriter(f'meta_data/metrics')
 
-        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=16, shuffle=True, pin_memory=True)
-        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
+        Simpson_dataloader_train = DataLoader(train_dataset, batch_size=batch_size, num_workers=self.num_workers, shuffle=True, pin_memory=self.pin_memory)
+        Simpson_dataloader_val = DataLoader(val_dataset, batch_size=batch_size, num_workers=self.num_workers, shuffle=False, pin_memory=self.pin_memory)
 
         # loss_func = nn.CrossEntropyLoss()
         loss_func = FocalLoss(gamma=1.5, reduction='mean')
@@ -158,7 +158,6 @@ class Classifier():
         self.optimizer = optim.AdamW(self.model.parameters(), lr=lr, weight_decay=0.02)
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=4)
 
-        metrics_data = []
         self.model.train()
 
         best_val_f1 = 0.0
@@ -168,23 +167,18 @@ class Classifier():
         for count_epoch in range(num_epoch):
             print("Epoch:", count_epoch)
 
-            train_metrics = self.epoch(count_epoch, Simpson_dataloader_train, self.optimizer, loss_func)
-            val_metrics = self.validation(Simpson_dataloader_val, loss_func)
+            train_metrics = self.__epoch(count_epoch, Simpson_dataloader_train, self.optimizer, loss_func)
+            val_metrics = self.__validation(Simpson_dataloader_val, loss_func)
 
             self.scheduler.step(train_metrics['Train_Loss'])
             new_lr = self.optimizer.param_groups[0]['lr']
 
             self.__log_metrics(train_metrics, val_metrics, count_epoch)
             self.__log_weights(count_epoch)
-            
-            all_metrics = train_metrics | val_metrics
-            metrics_data.append(all_metrics.values())
-            
+                        
             if(val_metrics["Val_F1"] > best_val_f1):
                 self.__save_model("best")
                 best_val_f1 = val_metrics["Val_F1"]
-
-            # self.__save_model(f"{count_epoch}")
 
             print(
                 f"Lr: {round(new_lr, 8)} | Loss Train: {train_metrics['Train_Loss']:.3f} | "
@@ -194,12 +188,9 @@ class Classifier():
             )
 
         self.writer.close()
-        self.__save_model("lost")
-        data_metrics = pd.DataFrame(metrics_data, columns=['Train_Loss', 'Train_Acc', 'Val_Loss', 'Val_Acc', 'Val_P', 'Val_R', 'Val_F1'])
-        data_metrics.to_csv('./meta_data/metrics_on_val.csv')
+        self.__save_model("last")
 
-
-    def epoch(self, count_epoch, train_dataloader, optimizer, loss_func):
+    def __epoch(self, count_epoch, train_dataloader, optimizer, loss_func):
         summ_loss = 0.0
         running_corrects = 0.0
         processed_data = 0.0
@@ -258,7 +249,7 @@ class Classifier():
                 )
 
 
-    def validation(self, val_dataloader, loss_func):
+    def __validation(self, val_dataloader, loss_func):
         self.model.eval()
 
         all_labels = []
@@ -282,7 +273,6 @@ class Classifier():
             running_loss += loss.item() * x_val.size(0)
             count_data += x_val.size(0)
 
-        
         val_loss = running_loss / count_data
         accuracy = accuracy_score(all_labels, all_preds)
         precision = precision_score(all_labels, all_preds, zero_division=True, average='macro')
@@ -322,7 +312,7 @@ class Classifier():
         self.model.eval()
         
         testset = SimpsonDataset(path_to_test_data, mode='test')
-        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=16, shuffle=False, pin_memory=True)
+        test_loader = DataLoader(testset, batch_size=batch_size, num_workers=self.num_workers, shuffle=False, pin_memory=self.pin_memory)
         
         all_preds = []
         all_labels = []
